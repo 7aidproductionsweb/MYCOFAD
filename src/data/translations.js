@@ -1,0 +1,42 @@
+export const translations = {
+  fr: {
+    welcome: "Bonjour",
+    helpPrompt: "dis-moi comment t'aider ?",
+    pinPlaceholder: "Entrez votre code PIN",
+    pinError: "Code incorrect",
+    documents: "Mes documents",
+    cv: "CV",
+    lettreMotivation: "Lettre de motivation",
+    attestation: "Attestation",
+    identifiant: "Identifiant",
+    view: "Voir",
+    edit: "Modifier",
+    download: "Télécharger",
+    send: "Envoyer",
+    save: "Enregistrer",
+    cancel: "Annuler",
+    confirm: "Confirmer",
+    logout: "Déconnexion",
+    actions: "Actions"
+  },
+  pt: {
+    welcome: "Olá",
+    helpPrompt: "como posso ajudar?",
+    pinPlaceholder: "Digite seu código PIN",
+    pinError: "Código incorreto",
+    documents: "Meus documentos",
+    cv: "Currículo",
+    lettreMotivation: "Carta de motivação",
+    attestation: "Certificado",
+    identifiant: "Identificador",
+    view: "Ver",
+    edit: "Editar",
+    download: "Baixar",
+    send: "Enviar",
+    save: "Salvar",
+    cancel: "Cancelar",
+    confirm: "Confirmar",
+    logout: "Sair",
+    actions: "Ações"
+  }
+};
