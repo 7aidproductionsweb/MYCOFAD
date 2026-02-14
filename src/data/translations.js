@@ -4,6 +4,7 @@ export const translations = {
     helpPrompt: "dis-moi comment t'aider ?",
     pinPlaceholder: "Entrez votre code PIN",
     pinError: "Code incorrect",
+    pinRetry: "Essais restants",
     documents: "Mes documents",
     cv: "CV",
     lettreMotivation: "Lettre de motivation",
@@ -17,13 +18,26 @@ export const translations = {
     cancel: "Annuler",
     confirm: "Confirmer",
     logout: "Déconnexion",
-    actions: "Actions"
+    actions: "Actions",
+    // Interface vocale
+    listening: "🎤 J'écoute... (10 secondes)",
+    heard: "J'ai entendu : ",
+    confirmAction: "Tu veux que je {action} ton {doc} ?",
+    notUnderstood: "Je n'ai pas compris. Dis par exemple :\n• 'Affiche mon CV'\n• 'Télécharge ma lettre'\n• 'Montre mon attestation'",
+    llmLimitReached: "Limite de requêtes atteinte pour aujourd'hui.",
+    llmRemaining: "Requêtes : ",
+    // Actions vocales
+    actionDisplay: "afficher",
+    actionDownload: "télécharger",
+    actionEdit: "modifier",
+    actionSend: "envoyer"
   },
   pt: {
     welcome: "Olá",
     helpPrompt: "como posso ajudar?",
     pinPlaceholder: "Digite seu código PIN",
     pinError: "Código incorreto",
+    pinRetry: "Tentativas restantes",
     documents: "Meus documentos",
     cv: "Currículo",
     lettreMotivation: "Carta de motivação",
@@ -37,6 +51,18 @@ export const translations = {
     cancel: "Cancelar",
     confirm: "Confirmar",
     logout: "Sair",
-    actions: "Ações"
+    actions: "Ações",
+    // Interface vocale
+    listening: "🎤 Ouvindo... (10 segundos)",
+    heard: "Eu ouvi: ",
+    confirmAction: "Você quer que eu {action} seu {doc}?",
+    notUnderstood: "Não entendi. Tente:\n• 'Mostrar meu CV'\n• 'Baixar minha carta'\n• 'Exibir meu certificado'",
+    llmLimitReached: "Limite de solicitações atingido hoje.",
+    llmRemaining: "Solicitações: ",
+    // Actions vocales
+    actionDisplay: "mostrar",
+    actionDownload: "baixar",
+    actionEdit: "editar",
+    actionSend: "enviar"
   }
 };

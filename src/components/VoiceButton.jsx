@@ -1,66 +1,135 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { initSpeechRecognition } from '../utils/speechRecognition';
-import { parseCommand } from '../utils/commandRouter';
+import { initSpeechRecognition, startListening, getSpeechLang } from '../utils/speechRecognition';
+import { processCommand, mapDocTypeToId } from '../utils/commandRouterNew';
 import { generateCV, downloadPDF } from '../utils/pdfGenerator.jsx';
 import ConfirmModal from './ConfirmModal';
 
 export default function VoiceButton() {
-  const { language, documents, t } = useApp();
+  const { language, documents, t, llmCount, maxLlm, incrementLlmCount } = useApp();
   const navigate = useNavigate();
   const recognitionRef = useRef(null);
+  const stopListeningRef = useRef(null);
 
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingCommand, setPendingCommand] = useState(null);
   const [error, setError] = useState('');
+  const [usedLlmForCommand, setUsedLlmForCommand] = useState(false);
 
   const handleStartListening = () => {
     setError('');
     setTranscript('');
+    setUsedLlmForCommand(false);
 
-    const lang = language === 'fr' ? 'fr-FR' : 'pt-BR';
+    const speechLang = getSpeechLang(language);
+    const recognition = initSpeechRecognition(speechLang);
 
-    const recognition = initSpeechRecognition(
-      lang,
-      (text, isFinal) => {
-        setTranscript(text);
-        if (isFinal) {
-          handleTranscriptFinal(text);
-        }
-      },
-      (errorMsg) => {
-        setError(errorMsg);
-        setIsListening(false);
-      }
-    );
-
-    if (recognition) {
-      recognitionRef.current = recognition;
-      recognition.start();
-      setIsListening(true);
-    }
-  };
-
-  const handleTranscriptFinal = (text) => {
-    const command = parseCommand(text, language);
-
-    if (command.action === 'unknown') {
+    if (!recognition) {
       setError(
         language === 'fr'
-          ? 'Commande non comprise. Essayez "voir mon CV" ou "mes documents"'
-          : 'Comando não compreendido. Tente "ver meu currículo" ou "meus documentos"'
+          ? 'Reconnaissance vocale non supportée par ce navigateur'
+          : 'Reconhecimento de voz não suportado neste navegador'
       );
-      setIsListening(false);
       return;
     }
 
-    // Afficher la modal de confirmation
+    recognitionRef.current = recognition;
+
+    // Démarrer l'écoute avec callbacks
+    const stopFn = startListening(
+      recognition,
+      // onInterim: affiche transcription en temps réel
+      (interimText) => {
+        setTranscript(interimText);
+      },
+      // onFinal: traite la commande finale
+      (finalText) => {
+        handleTranscriptFinal(finalText);
+      },
+      // onEnd: arrêt de l'écoute
+      () => {
+        setIsListening(false);
+      },
+      10000 // Timeout 10 secondes
+    );
+
+    stopListeningRef.current = stopFn;
+    setIsListening(true);
+  };
+
+  const handleTranscriptFinal = async (text) => {
+    setIsListening(false);
+
+    // Utiliser le nouveau commandRouter avec LLM
+    const result = await processCommand(text, language, llmCount, maxLlm);
+
+    // Si LLM utilisé, incrémenter le compteur
+    if (result.usedLlm) {
+      incrementLlmCount();
+      setUsedLlmForCommand(true);
+    }
+
+    // Commande non comprise
+    if (!result.understood) {
+      setError(result.message || t('notUnderstood'));
+      return;
+    }
+
+    // Construire la commande pour confirmation
+    const docId = mapDocTypeToId(result.docType);
+    if (!docId) {
+      setError(t('notUnderstood'));
+      return;
+    }
+
+    const doc = documents.find((d) => d.id === docId);
+    if (!doc) {
+      setError(t('notUnderstood'));
+      return;
+    }
+
+    const command = buildCommand(result.action, result.docType, docId, doc);
     setPendingCommand(command);
     setShowConfirm(true);
-    setIsListening(false);
+  };
+
+  const buildCommand = (action, docType, docId, doc) => {
+    const actionLabel = t(`action${action.charAt(0).toUpperCase() + action.slice(1)}`);
+    const docName = doc.name[language];
+
+    switch (action) {
+      case 'display':
+        return {
+          action: 'navigate',
+          target: `/document/view/${docId}`,
+          description: `${actionLabel} ${docName}`
+        };
+      case 'edit':
+        return {
+          action: 'navigate',
+          target: `/document/edit/${docId}`,
+          description: `${actionLabel} ${docName}`
+        };
+      case 'download':
+        return {
+          action: 'download',
+          target: docId,
+          doc,
+          description: `${actionLabel} ${docName}`
+        };
+      case 'send':
+        // Pour V1: redirection vers vue du document (envoi à implémenter V2)
+        return {
+          action: 'navigate',
+          target: `/document/view/${docId}`,
+          description: `${language === 'fr' ? 'Préparer envoi' : 'Preparar envio'} ${docName}`
+        };
+      default:
+        return null;
+    }
   };
 
   const executeCommand = async () => {
@@ -72,11 +141,14 @@ export default function VoiceButton() {
       if (pendingCommand.action === 'navigate') {
         navigate(pendingCommand.target);
       } else if (pendingCommand.action === 'download') {
-        // Télécharger le document
-        const doc = documents.find((d) => d.id === pendingCommand.target);
-        if (doc && doc.type === 'cv') {
+        const { doc } = pendingCommand;
+
+        if (doc.type === 'cv') {
           const blob = await generateCV(doc.content);
           downloadPDF(blob, 'CV_Luis_Chauveau.pdf');
+        } else {
+          // Autres documents: utiliser filePath ou générer selon le type
+          console.log('Download document:', doc.id);
         }
       }
     } catch (error) {
@@ -99,11 +171,13 @@ export default function VoiceButton() {
   };
 
   const stopListening = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (stopListeningRef.current) {
+      stopListeningRef.current();
     }
     setIsListening(false);
   };
+
+  const remainingLlm = maxLlm - llmCount;
 
   return (
     <div className="voice-button-container">
@@ -115,13 +189,20 @@ export default function VoiceButton() {
         🎤
       </button>
 
+      {/* Compteur LLM restant */}
+      <div className="llm-counter">
+        <small>
+          {t('llmRemaining')}{remainingLlm}/{maxLlm}
+        </small>
+      </div>
+
       {isListening && (
         <div className="voice-status">
-          <p className="voice-status-text">
-            {language === 'fr' ? 'Écoute...' : 'Ouvindo...'}
-          </p>
+          <p className="voice-status-text">{t('listening')}</p>
           {transcript && (
-            <p className="voice-transcript">"{transcript}"</p>
+            <p className="voice-transcript">
+              {t('heard')}"{transcript}"
+            </p>
           )}
         </div>
       )}

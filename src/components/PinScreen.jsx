@@ -1,18 +1,40 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import Footer from './Footer';
 
 export default function PinScreen() {
   const { login, t } = useApp();
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e) => {
+  // Son de confirmation (ding ascendant agréable)
+  const playSuccessSound = () => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+    osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.15); // Monte à A6
+
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15); // Fade out
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const success = login(pin);
+    const success = await login(pin);
     if (!success) {
       setError(true);
       setPin('');
       setTimeout(() => setError(false), 3000);
+    } else {
+      // Jouer le son de confirmation
+      playSuccessSound();
     }
   };
 
@@ -37,6 +59,7 @@ export default function PinScreen() {
           </button>
         </form>
       </div>
+      <Footer />
     </div>
   );
 }
